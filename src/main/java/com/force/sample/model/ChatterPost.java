@@ -1,11 +1,23 @@
 package com.force.sample.model;
 
 import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import javax.persistence.*;
 
+/**
+ * 
+ * This entity describes a single chatter post as stored in the Chatter To Do database.
+ * Most fields come from the Chatter API, but some are specific to the To Do application.
+ * One entry will be created per chatter post per user. So a single post that is liked by more than
+ * one user will appear in the database multiple times so that it's completeness can be tracked on a
+ * per user basis.
+ *
+ * @author John Simone
+ */
 @Entity
-public class ChatterPost {
+public class ChatterPost implements Comparable<ChatterPost>{
 
     public enum TO_DO_REASON {LIKE,MENTION};
     
@@ -22,6 +34,7 @@ public class ChatterPost {
     private boolean done;
     private URL postLink;
     private URL authorLink;
+    private Date postDate;
     
     public int getLocalId() {
         return localId;
@@ -89,6 +102,20 @@ public class ChatterPost {
     public void setAuthorLink(URL authorLink) {
         this.authorLink = authorLink;
     }
+    public Date getPostDate() {
+        return postDate;
+    }
+    public void setPostDate(Date postDate) {
+        this.postDate = postDate;
+    }
+    public String getPostDateStr() {
+        if(postDate != null) {
+            SimpleDateFormat df = new SimpleDateFormat("MM/dd HH:mm");
+            return df.format(postDate);            
+        } else {
+            return "";
+        }
+    }
     @Override
     public String toString() {
         return "{id=" + id + ", title=" + title + ", author=" + authorName + ", reason=" + reason + ", completed=" + done + "}";
@@ -146,6 +173,21 @@ public class ChatterPost {
         result = prime * result + ((id == null) ? 0 : id.hashCode());
         result = prime * result + ((title == null) ? 0 : title.hashCode());
         return result;
+    }
+    
+    /**
+     * posts will be sorted in descending date order.
+     */
+    @Override
+    public int compareTo(ChatterPost o) {
+        if(o.postDate == null ) {
+            if(this.postDate != null) {
+                return -1;
+            } else {
+                return 0;
+            }
+        }
+        return o.postDate.compareTo(this.postDate);
     }
     
 }

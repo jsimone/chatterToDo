@@ -17,12 +17,11 @@ body {
 
 #app_title {
 	position: relative;
-	left: 580px;
-	top: 85px;
-	width: 270px;
+	left: 275px;
+	top: 40px;
 	font-family: sans-serif;
 	font-family: 'arial rounded MT bold';
-	font-size: 18pt;
+	font-size: 30pt;
 	color: #009900;
 }
 
@@ -72,11 +71,12 @@ table.itemlist {
 
 table.itemlist th {
 	border-width: 1px;
-	padding: 1px;
+	padding: 5px;
 	border-style: none;
 	border-color: white;
-	background-color: black;
+	background-color: gray;
 	color: white;
+	height: 35px;
 	-moz-border-radius: ;
 }
 table.itemlist td {
