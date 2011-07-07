@@ -7,19 +7,19 @@
 	<jsp:attribute name="breadcrumb">Home</jsp:attribute>
 
 <jsp:body>
-<h1>A Basic Java Web App</h1>
-This template project consists of:
-<ul>
-<li>A standard Spring MVC project structure</li>
-<li>A simple <code>HomeController</code> class that shows this page</li> 
-<li>A few JSP pages that renders the views with <code>template.tag</code> template file and <code>layout.css</code>
-</ul>
 
-<h2>Chatter Posts</h2>
-<ul>
+<h2>Chatter To Do Items</h2>
+<p>Chatter items that you have liked or that you have been mentioned in will show up here as to do items. You can check each off as you complete it or decide that there is no need to re-visit it.</p>
+<table>
+<thead>
+	<tr><th>done</th><th>author</th><th>body</th><th>reason</th><th>link</th><th>set as complete</th></tr>
+</thead>
 <c:forEach items="${posts}" var="post">
-	<li>id: ${post.id}, title: ${post.title}</li>
+	<tr>
+		<td>${post.done}</td><td>${post.author}</td><td>${post.body}</td><td>${post.reason}</td><td><a href="${post.link}" target="new">link</a></td><td><a href="/completeItem/${post.localId}">complete</a></td>
+	</tr>
 </c:forEach>
-</ul>
+</table>
+
 </jsp:body>
 </tags:template>

@@ -1,17 +1,26 @@
 package com.force.sample.service;
 
 import java.io.*;
-import java.net.URL;
-import java.net.URLConnection;
-import java.util.*;
+import java.net.*;
+import java.util.Iterator;
+import java.util.List;
 
+import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.force.sample.dao.ChatterPostDao;
 import com.force.sample.model.ChatterPost;
 import com.force.sdk.oauth.context.ForceSecurityContextHolder;
 import com.force.sdk.oauth.context.SecurityContext;
 
+@Service
 public class ChatterService {
+    
+    @Autowired
+    private ChatterPostDao chatterPostDao;
     
     private URLConnection buildConn(String destination, boolean includeUsername) throws IOException {
         SecurityContext sc = ForceSecurityContextHolder.get(false);
@@ -32,12 +41,20 @@ public class ChatterService {
         return sc.getUserId();
     }
     
-    public List<ChatterPost> getFeed() throws IOException {
-
-        ArrayList<ChatterPost> posts = new ArrayList<ChatterPost>();
+    private String getEndpoint() {
+        return "https://vmf01.t.salesforce.com";
+    }
+    
+    public List<ChatterPost> getToDoFeed() throws IOException {
+        List<ChatterPost> posts = getStoredPostsForUser();
+        getLikes(posts);
+        getMentions(posts);
+        return posts;
+    }
+    
+    public List<ChatterPost> getMentions(List<ChatterPost> posts) throws IOException {
         
-        //URLConnection urlConn = buildConn("/data/v22.0/chatter/feeds/news/me");
-        URLConnection urlConn = buildConn("/data/v22.0/chatter/feeds/user-profile/", true);
+        URLConnection urlConn = buildConn("/data/v22.0/chatter/feeds/to/", true);
         BufferedReader in = new BufferedReader(new InputStreamReader(urlConn.getInputStream()));
         
         StringBuilder jsonReturn = new StringBuilder();
@@ -48,50 +65,88 @@ public class ChatterService {
         }
         
         ObjectMapper mapper = new ObjectMapper();
-        HashMap<String, Object> mappedResult = 
-            mapper.readValue(jsonReturn.toString().getBytes(), HashMap.class);
+        JsonNode rootNode = mapper.readValue(jsonReturn.toString().getBytes(), JsonNode.class);
         
-        System.out.println(jsonReturn.toString());
-        System.out.println("-------------About to print out feed items: ");
-        
-        HashMap<String, Object> feedItems = (HashMap<String, Object>) mappedResult.get("feedItems");
-        ArrayList<HashMap<String, Object>> items = (ArrayList<HashMap<String, Object>>) feedItems.get("items");
-        
-        String userId = getUserId();
-        for(HashMap<String, Object> item : items) {
-            System.out.println("item id: " + item.get("id") + ", item title: " + item.get("title") + ", likes: " + item.get("likes"));
-            if(didILike((HashMap<String, Object>)item.get("likes"), userId)) {
-                ChatterPost post = buildChatterPost(item, ChatterPost.TO_DO_REASON.LIKE);
+        JsonNode itemsNode = rootNode.path("feedItems").path("items");
+        Iterator<JsonNode> itemsIter = itemsNode.getElements();
+        while(itemsIter.hasNext()) {
+            JsonNode itemNode = itemsIter.next();
+            ChatterPost post = buildChatterPost(itemNode, ChatterPost.TO_DO_REASON.MENTION);
+            if(!posts.contains(post)) {                
                 posts.add(post);
+                chatterPostDao.savePost(post);
             }
         }
         
         return posts;
     }
     
-    private ChatterPost buildChatterPost(HashMap<String, Object> item, ChatterPost.TO_DO_REASON toDoReason) {
+    public List<ChatterPost> getLikes(List<ChatterPost> posts) throws IOException {
+
+        URLConnection urlConn = buildConn("/data/v22.0/chatter/feeds/news/me ", false);
+        BufferedReader in = new BufferedReader(new InputStreamReader(urlConn.getInputStream()));
+        
+        StringBuilder jsonReturn = new StringBuilder();
+        String inputLine;
+        
+        while((inputLine = in.readLine()) != null) {
+            jsonReturn.append(inputLine);
+        }
+        
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode rootNode = mapper.readValue(jsonReturn.toString().getBytes(), JsonNode.class);
+
+        JsonNode itemsNode = rootNode.path("feedItems").path("items");
+        Iterator<JsonNode> itemsIter = itemsNode.getElements();
+        String userId = getUserId();
+        while(itemsIter.hasNext()) {
+            JsonNode itemNode = itemsIter.next();
+            if(didILike(itemNode.get("likes"), userId)) {
+                ChatterPost post = buildChatterPost(itemNode, ChatterPost.TO_DO_REASON.LIKE);
+                if(!posts.contains(post)) {
+                    posts.add(post);
+                    chatterPostDao.savePost(post);
+                }
+            }
+        }
+        
+//        System.out.println(jsonReturn.toString());
+//        System.out.println("-------------About to print out feed items: ");
+        
+        return posts;
+    }
+    
+    private ChatterPost buildChatterPost(JsonNode item, ChatterPost.TO_DO_REASON toDoReason) {
         ChatterPost post = new ChatterPost();
         
-        post.setId((String)item.get("id"));
-        post.setTitle((String)item.get("title"));
+        post.setId(item.path("id").getTextValue());
+        post.setTitle(item.path("title").getTextValue());
+        post.setAuthor(item.path("user").path("name").getTextValue());
+        post.setFeedOwnerUserId(getUserId());
+        post.setBody(item.path("body").path("text").getTextValue());
         post.setReason(toDoReason);
         
+        try {
+            post.setLink(new URL(buildLink(item.path("user").path("id").getTextValue(), post.getId())));
+        } catch (MalformedURLException e) {
+            post.setLink(null);
+        }
+
         return post;
     }
     
-    private boolean didILike(HashMap<String, Object> likes, String userId) {
-        int total = (Integer)likes.get("total");
+    private boolean didILike(JsonNode likesNode, String userId) {
+        int total = likesNode.path("total").getIntValue();
         
         if(total < 1) {
             return false;
         }
         
-        ArrayList<HashMap<String, Object>> likesList = 
-            (ArrayList<HashMap<String, Object>>) likes.get("likes");
+        Iterator<JsonNode> likesIter = likesNode.path("likes").getElements();
         
-        for(HashMap<String, Object> like : likesList) {
-            HashMap<String, Object> user = (HashMap<String, Object>)like.get("user");
-            String likeUserId = (String)user.get("id");
+        while(likesIter.hasNext()) {
+            JsonNode likeNode = likesIter.next();
+            String likeUserId = likeNode.path("user").path("id").getTextValue();
             if(userId.equals(likeUserId)) {
                 return true;
             }
@@ -99,6 +154,21 @@ public class ChatterService {
         
         return false;
         
+    }
+    
+    private String buildLink(String userId, String postId) {
+        return getEndpoint() + "/_ui/core/userprofile/UserProfilePage?u=" + userId + "&ChatterFeedItemId=" + postId;
+    }
+    
+    private List<ChatterPost> getStoredPostsForUser() {
+        return chatterPostDao.getPostsForUser(getUserId());
+    }
+    
+    @Transactional
+    public void setPostToDone(Integer postId) {
+        ChatterPost post = chatterPostDao.getPost(postId);
+        post.setDone(true);
+        chatterPostDao.savePost(post);
     }
     
 }

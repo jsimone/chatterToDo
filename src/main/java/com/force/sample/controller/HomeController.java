@@ -8,9 +8,9 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 
 import com.force.sample.model.ChatterPost;
@@ -23,7 +23,9 @@ import com.force.sample.service.ChatterService;
 public class HomeController {
 
 	private static final Logger logger = LoggerFactory.getLogger(HomeController.class);
-	private ChatterService chatterService = new ChatterService();
+	
+	@Autowired
+	private ChatterService chatterService;
 
 	/**
 	 * Simply selects the home view to render by returning its name.
@@ -33,14 +35,16 @@ public class HomeController {
 	public ModelAndView home(HttpServletRequest req, HttpServletResponse res) throws IOException {
 	    logger.info("requesting home");
 	    	
-	    List<ChatterPost> posts = chatterService.getFeed();
-	    System.out.println("TO DO POSTS...............");
-	    for(ChatterPost post : posts) {
-	        System.out.println(post.toString());
-	    }
+	    List<ChatterPost> posts = chatterService.getToDoFeed();
 	    ModelAndView mv = new ModelAndView("home");
 	    mv.addObject("posts", posts);
 		return mv;
+	}
+	
+	@RequestMapping(value="/completeItem/{postId}", method=RequestMethod.GET)
+	public String completeItem(@PathVariable String postId) {
+	    chatterService.setPostToDone(Integer.valueOf(postId));
+	    return "redirect:/";
 	}
 
 }
