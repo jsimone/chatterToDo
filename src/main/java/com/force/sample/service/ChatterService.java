@@ -121,15 +121,18 @@ public class ChatterService {
         
         post.setId(item.path("id").getTextValue());
         post.setTitle(item.path("title").getTextValue());
-        post.setAuthor(item.path("user").path("name").getTextValue());
+        post.setAuthorName(item.path("user").path("name").getTextValue());
+        post.setAuthorId(item.path("user").path("id").getTextValue());
         post.setFeedOwnerUserId(getUserId());
         post.setBody(item.path("body").path("text").getTextValue());
         post.setReason(toDoReason);
         
         try {
-            post.setLink(new URL(buildLink(item.path("user").path("id").getTextValue(), post.getId())));
+            post.setAuthorLink(new URL(buildLink(item.path("user").path("id").getTextValue())));
+            post.setPostLink(new URL(buildLink(item.path("user").path("id").getTextValue(), post.getId())));
         } catch (MalformedURLException e) {
-            post.setLink(null);
+            post.setAuthorLink(null);
+            post.setPostLink(null);
         }
 
         return post;
@@ -157,7 +160,11 @@ public class ChatterService {
     }
     
     private String buildLink(String userId, String postId) {
-        return getEndpoint() + "/_ui/core/userprofile/UserProfilePage?u=" + userId + "&ChatterFeedItemId=" + postId;
+        return buildLink(userId) + "&ChatterFeedItemId=" + postId;
+    }
+    
+    private String buildLink(String userId) {
+        return getEndpoint() + "/_ui/core/userprofile/UserProfilePage?u=" + userId;
     }
     
     private List<ChatterPost> getStoredPostsForUser() {
@@ -166,9 +173,15 @@ public class ChatterService {
     
     @Transactional
     public void setPostToDone(Integer postId) {
-        ChatterPost post = chatterPostDao.getPost(postId);
+        ChatterPost post = chatterPostDao.getPost(postId, getUserId());
         post.setDone(true);
         chatterPostDao.savePost(post);
     }
     
+    @Transactional
+    public void setPostToNotDone(Integer postId) {
+        ChatterPost post = chatterPostDao.getPost(postId, getUserId());
+        post.setDone(false);
+        chatterPostDao.savePost(post);
+    }    
 }

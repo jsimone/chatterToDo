@@ -46,6 +46,11 @@ public class HomeController {
 	    chatterService.setPostToDone(Integer.valueOf(postId));
 	    return "redirect:/";
 	}
-
+    
+    @RequestMapping(value="/unCompleteItem/{postId}", method=RequestMethod.GET)
+    public String unCompleteItem(@PathVariable String postId) {
+        chatterService.setPostToNotDone(Integer.valueOf(postId));
+        return "redirect:/";
+    }
 }
 

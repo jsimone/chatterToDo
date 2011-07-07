@@ -12,11 +12,28 @@
 <p>Chatter items that you have liked or that you have been mentioned in will show up here as to do items. You can check each off as you complete it or decide that there is no need to re-visit it.</p>
 <table>
 <thead>
-	<tr><th>done</th><th>author</th><th>body</th><th>reason</th><th>link</th><th>set as complete</th></tr>
+	<tr>
+		<th>done</th>
+		<th>author</th>
+		<th>body</th>
+		<th>post</th>
+	</tr>
 </thead>
 <c:forEach items="${posts}" var="post">
 	<tr>
-		<td>${post.done}</td><td>${post.author}</td><td>${post.body}</td><td>${post.reason}</td><td><a href="${post.link}" target="new">link</a></td><td><a href="/completeItem/${post.localId}">complete</a></td>
+		<td>
+			<c:choose>
+				<c:when test="${post.done}" >
+					<a href="/unCompleteItem/${post.localId}"><img src="/resources/checkbox-checked-th.png" height="50" width="50"/></a>
+				</c:when>
+				<c:otherwise>
+					<a href="/completeItem/${post.localId}"><img src="/resources/checkbox-unchecked-th.png" height="50" width="50"/></a>
+				</c:otherwise>
+			</c:choose>
+		</td>
+		<td><a href="${post.authorLink}" target="new">${post.authorName}</a></td>
+		<td>${post.body}</td>
+		<td><a href="${post.postLink}" target="new">view post</a></td>
 	</tr>
 </c:forEach>
 </table>
