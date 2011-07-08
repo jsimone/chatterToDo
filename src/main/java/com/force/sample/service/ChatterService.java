@@ -66,7 +66,8 @@ public class ChatterService {
      * Get the API endpoint for the logged in user.
      */
     private String getEndpoint() {
-        return "https://vmf01.t.salesforce.com";
+        SecurityContext sc = ForceSecurityContextHolder.get(false);
+        return sc.getEndPoint().substring(0, sc.getEndPoint().indexOf("/services"));
     }
 
     /**
@@ -95,8 +96,6 @@ public class ChatterService {
             }
         }
         
-        System.out.println("----------------------------json return: " + jsonReturn.toString());
-
        return jsonReturn.toString();
     }
     

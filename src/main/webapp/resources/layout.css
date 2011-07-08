@@ -7,6 +7,10 @@ body {
 	margin-top:30px;
 }
 
+img {
+	border: none;	
+}
+
 /* ----- HEADER ----- */
 
 #header {
