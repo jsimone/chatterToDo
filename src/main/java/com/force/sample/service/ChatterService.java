@@ -86,7 +86,24 @@ public class ChatterService {
             while((inputLine = in.readLine()) != null) {
                 jsonReturn.append(inputLine);
             }            
-        } finally {
+        } catch(IOException e) {
+            BufferedReader errorIn = null;
+            try {                
+                errorIn = new BufferedReader(new InputStreamReader(((HttpURLConnection)urlConn).getErrorStream()));
+                String apiErrorMessage = errorIn.readLine();
+                logger.error("Error while connecting to the REST API: " + apiErrorMessage);
+                throw new IOException(apiErrorMessage, e);
+            } finally {
+                if(errorIn != null) {
+                    try {
+                        errorIn.close();
+                    } catch (IOException e1) {
+                        logger.error("Error closing error input stream from chatter api call.");
+                    }
+                }                
+            }
+        }
+        finally {
             if(in != null) {
                 try {
                     in.close();
