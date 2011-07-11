@@ -27,6 +27,7 @@ public class ChatterPost implements Comparable<ChatterPost>{
     private String id;
     private String feedOwnerUserId;
     private String title;
+    @Column(length=1000)
     private String body;
     private String authorName;
     private String authorId;
